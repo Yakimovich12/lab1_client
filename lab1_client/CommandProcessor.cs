@@ -30,14 +30,14 @@ namespace SocketClient
                 Console.WriteLine($"Enter \'{command.Key}\' if you want to use {command.Key} command");
             }
 
-            string operation = Console.ReadLine();
+            string operation = Console.ReadLine().Split(' ')[0];
 
             return CommandProcessor.Commands[operation];
         }
 
         private static bool Echo(Socket requestHandler)
         {
-            byte[] request = Encoding.Unicode.GetBytes("ECHO");
+            byte[] request = Encoding.Unicode.GetBytes("ECHO "+Console.ReadLine());
 
             requestHandler.Send(request);
 
@@ -132,27 +132,6 @@ namespace SocketClient
 
             string path = Console.ReadLine();
 
-            string fileName = path.Substring(path.LastIndexOf('\\'));
-
-            string newFileName;
-
-            int nameIndex = 0;
-
-            if (File.Exists(fileName))
-            {
-                do
-                {
-                    int indexEx = fileName.LastIndexOf('.');
-
-                    newFileName = fileName.Substring(0, indexEx) + nameIndex.ToString() + fileName.Substring(indexEx);
-
-                    nameIndex++;
-                }
-                while (File.Exists(newFileName));
-
-                fileName = newFileName;
-            }
-            
             var requestString = "DOWNLOAD " + path;
 
             byte[] request = Encoding.Unicode.GetBytes(requestString);
@@ -168,34 +147,24 @@ namespace SocketClient
                 if (response.Equals("Передача файла..."))
                 {
                     requestHandler.Send(new byte[] { 1 });
-
-                    byte[] fileSizeArray = new byte[sizeof(long)];
-
-                    requestHandler.Receive(fileSizeArray, 0, sizeof(long), SocketFlags.None);
-
-                    long fileSize = BitConverter.ToInt64(fileSizeArray);
-
-                    int bytes = 0;
-
-                    byte[] responseData = new byte[ServerSettings.DataBufferLengthInBytes];
-
-                    long offset = 0;
-
-                    using (FileStream fout = new FileStream(fileName, FileMode.Create))
+                    using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write))
                     {
-                        do
+                        byte[] fileDataBuffer = new byte[1024];
+                        byte[] lengthBuffer = new byte[sizeof(long)];
+                        requestHandler.Receive(lengthBuffer, 0, sizeof(long), SocketFlags.None);
+                        long fileLengthInBytes = BitConverter.ToInt64(lengthBuffer);
+
+                        int receivedBytesCount = 0;
+                        while (receivedBytesCount < fileLengthInBytes)
                         {
-                            bytes = requestHandler.Receive(responseData);
+                            var receivedBytesOnIteration = requestHandler.Receive(fileDataBuffer);
 
-                            for (int index = 0; index < responseData.Length; index++)
-                            {
-                                fout.WriteByte(responseData[index]);
-                            }
+                            stream.Write(fileDataBuffer, 0, receivedBytesOnIteration);
 
-                            offset += response.Length;
+                            receivedBytesCount += receivedBytesOnIteration;
                         }
-                        while (offset < fileSize);
                     }
+
 
                     return true;
                 }
@@ -211,37 +180,24 @@ namespace SocketClient
         private static bool Upload(Socket requestHandler)
         {
             Console.WriteLine("Введите путь к файлу:");
-
             string path = Console.ReadLine();
-
             if (!File.Exists(path))
             {
                 throw new ArgumentException("File is not exist", nameof(path));
             }
 
-            string fileName = path.Substring(path.LastIndexOf('\\'));
-
-            var requestString = "UPLOAD " + fileName;
-
-            byte[] request = Encoding.Unicode.GetBytes(requestString);
-
+            byte[] request = Encoding.Unicode.GetBytes("UPLOAD " + path);
             requestHandler.Send(request);
 
             byte[] response = new byte[ServerSettings.DataBufferLengthInBytes];
-
             int receiveBytes = requestHandler.Receive(response);
 
             if (receiveBytes == 1 && response[0] == 1)
             {
                 long length = new FileInfo(path).Length;
-
                 byte[] lengthArray = BitConverter.GetBytes(length);
 
-                requestHandler.Send(lengthArray);
-
-                byte[] array = new byte[ServerSettings.DataBufferLengthInBytes];
-
-                using (FileStream fin = new FileStream(path, FileMode.Open))
+                using (FileStream fin = new FileStream(path, FileMode.Open, FileAccess.Read))
                 {
                     requestHandler.SendFile(path, lengthArray, null, TransmitFileOptions.UseDefaultWorkerThread);
                 }

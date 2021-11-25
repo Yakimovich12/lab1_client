@@ -24,7 +24,7 @@ namespace SocketClient
 
                 name = nameof(operation);
             }
-            while (name.Equals("CLOSE", StringComparison.InvariantCultureIgnoreCase) && result);
+            while (!(name.Equals("CLOSE", StringComparison.InvariantCultureIgnoreCase) && result));
         }
 
         public static Socket ConfigureSocket()
