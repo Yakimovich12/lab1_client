@@ -144,8 +144,12 @@ namespace SocketClient
             {
                 Console.WriteLine($"Ответ сервера: {response}");
 
+
                 if (response.Equals("Передача файла..."))
                 {
+                    var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
+                    requestHandler.ReceiveTimeout = 10000;
+
                     requestHandler.Send(new byte[] { 1 });
                     using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write))
                     {
@@ -157,7 +161,13 @@ namespace SocketClient
                         int receivedBytesCount = 0;
                         while (receivedBytesCount < fileLengthInBytes)
                         {
-                            var receivedBytesOnIteration = requestHandler.Receive(fileDataBuffer);
+                            int receivedBytesOnIteration = 0;
+                            if (ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration) == false)
+                            {
+                                requestHandler.ReceiveTimeout = receiveTimeoutMemory;
+                                return false;
+                            }
+
 
                             stream.Write(fileDataBuffer, 0, receivedBytesOnIteration);
 
@@ -165,7 +175,7 @@ namespace SocketClient
                         }
                     }
 
-
+                    requestHandler.ReceiveTimeout = receiveTimeoutMemory;
                     return true;
                 }
             }
@@ -209,6 +219,39 @@ namespace SocketClient
                 Console.WriteLine(response.ToString());
             }
 
+            return false;
+        }
+
+        public static bool ReceiveChunk(Socket requestHandler, byte[] chunkBuffer, out int receivedBytesCount)
+        {
+            bool isChunkReceived = false;
+            while (!isChunkReceived)
+            {
+                try
+                {
+                    receivedBytesCount = requestHandler.Receive(chunkBuffer);
+                    return true;
+                }
+                catch (SocketException)
+                {
+                    Console.WriteLine("Передача файла прервана, попытаться восстановить?");
+                    Console.WriteLine("1. Да\n2. Нет");
+
+                    if (Console.ReadLine() == "1")
+                    {
+                        requestHandler.Send(new byte[] { 1 });
+                    }
+                    else
+                    {
+                        requestHandler.Send(new byte[] { 0 });
+
+                        receivedBytesCount = 0;
+                        return false;
+                    }
+                }
+            }
+
+            receivedBytesCount = 0;
             return false;
         }
     }
