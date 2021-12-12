@@ -4,13 +4,13 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.IO;
-
+using System.Diagnostics;
 
 namespace SocketClient
 {
     public static class CommandProcessor
     {
-        public delegate bool CommandHandler(Socket socket);
+        public delegate string CommandHandler(Socket socket);
         public static Dictionary<string, CommandHandler> Commands { get; private set; }
         static CommandProcessor()
         {
@@ -32,12 +32,12 @@ namespace SocketClient
 
             string operation = Console.ReadLine().Split(' ')[0];
 
-            return CommandProcessor.Commands[operation];
+            return CommandProcessor.Commands[operation.ToUpperInvariant()];
         }
 
-        private static bool Echo(Socket requestHandler)
+        private static string Echo(Socket requestHandler)
         {
-            byte[] request = Encoding.Unicode.GetBytes("ECHO "+Console.ReadLine());
+            byte[] request = Encoding.Unicode.GetBytes("ECHO "+ Console.ReadLine());
 
             requestHandler.Send(request);
 
@@ -52,7 +52,7 @@ namespace SocketClient
                 throw new ArgumentNullException(nameof(response), $"{nameof(response)} cannot be null");
             }
 
-            return true;
+            return "ECHO";
         }
 
         public static string ResponseData(Socket requestHandler)
@@ -74,7 +74,7 @@ namespace SocketClient
             return builder.ToString();
         }
 
-        private static bool Time(Socket requestHandler)
+        private static string Time(Socket requestHandler)
         {
             byte[] request = Encoding.Unicode.GetBytes("TIME");
 
@@ -91,10 +91,10 @@ namespace SocketClient
                 throw new ArgumentNullException(nameof(response), $"{nameof(response)} cannot be null");
             }
 
-            return true;
+            return "TIME";
         }
 
-        private static bool Close(Socket requestHandler)
+        private static string Close(Socket requestHandler)
         {
             byte[] request = Encoding.Unicode.GetBytes("CLOSE");
 
@@ -104,10 +104,10 @@ namespace SocketClient
 
             requestHandler.Close();
 
-            return true;
+            return "CLOSE";
         }
         
-        private static bool IsAlive(Socket requestHandler)
+        private static string IsAlive(Socket requestHandler)
         {
             byte[] request = Encoding.Unicode.GetBytes("ISALIVE");
 
@@ -123,10 +123,12 @@ namespace SocketClient
             }
             while (requestHandler.Available > 0);
 
-            return responseData.Length == 1 && responseData[0] == 1;
+            Console.WriteLine($"ISAlive {responseData.Length == 1 && responseData[0] == 1}");
+
+            return "ISALIVE";
         }
 
-        private static bool Download(Socket requestHandler)
+        private static string Download(Socket requestHandler)
         {
             Console.WriteLine("Введите путь к файлу:");
 
@@ -147,9 +149,13 @@ namespace SocketClient
                 if (response.Equals("Передача файла..."))
                 {
                     requestHandler.Send(new byte[] { 1 });
+
                     using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write))
                     {
-                        byte[] fileDataBuffer = new byte[1024];
+                        Stopwatch timer = new Stopwatch();
+                        timer.Start();
+
+                        byte[] fileDataBuffer = new byte[1024*1024];
                         byte[] lengthBuffer = new byte[sizeof(long)];
                         requestHandler.Receive(lengthBuffer, 0, sizeof(long), SocketFlags.None);
                         long fileLengthInBytes = BitConverter.ToInt64(lengthBuffer);
@@ -162,11 +168,17 @@ namespace SocketClient
                             stream.Write(fileDataBuffer, 0, receivedBytesOnIteration);
 
                             receivedBytesCount += receivedBytesOnIteration;
+
+                            var temp = receivedBytesCount / (fileLengthInBytes / 100);
+
+                            Console.Write($"Скачано {temp}%\r");
                         }
+
+                        timer.Stop();
+                        var deltaTime = timer.ElapsedMilliseconds;
+
+                        Console.WriteLine($"Скорость передачи {(double)fileLengthInBytes / (1.0 / 1.024 * deltaTime * 1024)} Mb/s");
                     }
-
-
-                    return true;
                 }
             }
             else
@@ -174,10 +186,10 @@ namespace SocketClient
                 throw new ArgumentNullException(nameof(response), $"{nameof(response)} cannot be null");
             }
 
-            return false;
+            return "DOWNLOAD";
         }
 
-        private static bool Upload(Socket requestHandler)
+        private static string Upload(Socket requestHandler)
         {
             Console.WriteLine("Введите путь к файлу:");
             string path = Console.ReadLine();
@@ -201,15 +213,13 @@ namespace SocketClient
                 {
                     requestHandler.SendFile(path, lengthArray, null, TransmitFileOptions.UseDefaultWorkerThread);
                 }
-
-                return true;
             }
             else
             {
                 Console.WriteLine(response.ToString());
             }
 
-            return false;
+            return "UPLOAD";
         }
     }
 }

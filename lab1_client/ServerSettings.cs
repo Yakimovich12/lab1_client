@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace SocketClient
 {
     public class ServerSettings
@@ -17,7 +12,7 @@ namespace SocketClient
         public static int SocketReceiveTimeout { get; private set; }
         static ServerSettings()
         {
-            ServerIP = "127.0.0.1";
+            ServerIP = "25.66.204.93";//"192.168.0.2";
 
             Port = 8005;
 

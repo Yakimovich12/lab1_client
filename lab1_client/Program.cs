@@ -12,19 +12,15 @@ namespace SocketClient
 
             Console.WriteLine("Клиент подключен к серверу");
 
-            string name;
-
-            bool result;
+            string operationName;
 
             do
             {
                 var operation = CommandProcessor.GetRequiredOperation();
 
-                result = operation(socket);
-
-                name = nameof(operation);
+                operationName = operation(socket);
             }
-            while (!(name.Equals("CLOSE", StringComparison.InvariantCultureIgnoreCase) && result));
+            while (!operationName.Equals("CLOSE", StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static Socket ConfigureSocket()
