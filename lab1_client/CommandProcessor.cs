@@ -168,10 +168,11 @@ namespace SocketClient
                         while (receivedBytesCount < fileLengthInBytes)
                         {
                             int receivedBytesOnIteration = 0;
+
                             if (ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration) == false)
                             {
                                 requestHandler.ReceiveTimeout = receiveTimeoutMemory;
-                                return false;
+                                return "DOWNLOAD";
                             }
 
 
@@ -184,16 +185,13 @@ namespace SocketClient
                             Console.Write($"Скачано {temp}%\r");
                         }
 
-<<<<<<< HEAD
                         timer.Stop();
                         var deltaTime = timer.ElapsedMilliseconds;
 
                         Console.WriteLine($"Скорость передачи {(double)fileLengthInBytes / (1.0 / 1.024 * deltaTime * 1024)} Mb/s");
                     }
-=======
+
                     requestHandler.ReceiveTimeout = receiveTimeoutMemory;
-                    return true;
->>>>>>> 88d1740bea1dc7a9e0d58dfb907fe26d75fefeae
                 }
             }
             else
