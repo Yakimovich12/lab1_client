@@ -151,6 +151,8 @@ namespace SocketClient
                 {
                     var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
                     requestHandler.ReceiveTimeout = 10000;
+                    //var sendTimeoutMemory = requestHandler.SendTimeout;
+                    //requestHandler.SendTimeout = 20000;
 
                     requestHandler.Send(new byte[] { 1 });
 
@@ -192,6 +194,7 @@ namespace SocketClient
                     }
 
                     requestHandler.ReceiveTimeout = receiveTimeoutMemory;
+                    //requestHandler.SendTimeout = sendTimeoutMemory;
                 }
             }
             else
