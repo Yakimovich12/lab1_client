@@ -25,11 +25,9 @@ namespace SocketClient
 
         public static Socket ConfigureSocket()
         {
-            IPEndPoint ipPoint = new IPEndPoint(IPAddress.Parse(ServerSettings.ServerIP), ServerSettings.Port);
-
-            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            socket.Connect(ipPoint);
+            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            IPEndPoint ipEndpoint = new IPEndPoint(IPAddress.Parse(Settings.ClientIP), Settings.PortClient);
+            socket.Bind(ipEndpoint);
 
             //socket.ReceiveTimeout = ServerSettings.SocketReceiveTimeout;
 

@@ -10,6 +10,8 @@ namespace SocketClient
 {
     public static class CommandProcessor
     {
+        public static IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(Settings.ServerIP), Settings.PortServer);
+
         public delegate string CommandHandler(Socket socket);
         public static Dictionary<string, CommandHandler> Commands { get; private set; }
         static CommandProcessor()
@@ -39,7 +41,8 @@ namespace SocketClient
         {
             byte[] request = Encoding.Unicode.GetBytes("ECHO "+ Console.ReadLine());
 
-            requestHandler.Send(request);
+            requestHandler.SendTo(request,remoteEndPoint);
+
 
             string response = ResponseData(requestHandler);
 
@@ -61,11 +64,11 @@ namespace SocketClient
 
             int bytes = 0;
 
-            byte[] responseData = new byte[ServerSettings.DataBufferLengthInBytes];
+            byte[] responseData = new byte[Settings.DataBufferLengthInBytes];
 
             do
             {
-                bytes = requestHandler.Receive(responseData);
+                bytes = requestHandler.ReceiveFrom(responseData,ref remoteEndPoint);
 
                 builder.Append(Encoding.Unicode.GetString(responseData, 0, bytes));
             }
@@ -151,8 +154,6 @@ namespace SocketClient
                 {
                     var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
                     requestHandler.ReceiveTimeout = 10000;
-                    //var sendTimeoutMemory = requestHandler.SendTimeout;
-                    //requestHandler.SendTimeout = 20000;
 
                     requestHandler.Send(new byte[] { 1 });
 
@@ -194,7 +195,6 @@ namespace SocketClient
                     }
 
                     requestHandler.ReceiveTimeout = receiveTimeoutMemory;
-                    //requestHandler.SendTimeout = sendTimeoutMemory;
                 }
             }
             else
