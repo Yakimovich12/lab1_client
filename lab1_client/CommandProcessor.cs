@@ -180,7 +180,7 @@ namespace SocketClient
                         int receivedBytesCount = 0;
                         while (receivedBytesCount < fileLengthInBytes)
                         {
-                            int receivedBytesOnIteration = 0;
+                            int receivedBytesOnIteration;
 
                             long offset = ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration);
 
