@@ -244,37 +244,25 @@ namespace SocketClient
             return "UPLOAD";
         }
 
-        public static bool ReceiveChunk(Socket requestHandler, byte[] chunkBuffer, out int receivedBytesCount)
+        public static int ReceiveChunk(Socket requestHandler, byte[] chunkBuffer, out int receivedBytesCount)
         {
-            bool isChunkReceived = false;
-            while (!isChunkReceived)
+            int offset;
+            var offsetBuffer = new byte[sizeof(int)];
+            EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            do
             {
-                try
-                {
-                    receivedBytesCount = requestHandler.Receive(chunkBuffer);
-                    return true;
-                }
-                catch (SocketException)
-                {
-                    Console.WriteLine("Передача файла прервана, попытаться восстановить?");
-                    Console.WriteLine("1. Да\n2. Нет");
+                requestHandler.ReceiveFrom(offsetBuffer, sizeof(int), SocketFlags.None, ref senderEndPoint);
 
-                    if (Console.ReadLine() == "1")
-                    {
-                        requestHandler.Send(new byte[] { 1 });
-                    }
-                    else
-                    {
-                        requestHandler.Send(new byte[] { 0 });
+                offset = BitConverter.ToInt32(offsetBuffer);
+            } while (!senderEndPoint.Equals(remoteEndPoint));
 
-                        receivedBytesCount = 0;
-                        return false;
-                    }
-                }
-            }
 
-            receivedBytesCount = 0;
-            return false;
+            do
+            {
+                receivedBytesCount = requestHandler.ReceiveFrom(chunkBuffer, ref senderEndPoint);
+            } while (!senderEndPoint.Equals(remoteEndPoint));
+
+            return offset;
         }
     }
 }
