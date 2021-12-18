@@ -168,7 +168,7 @@ namespace SocketClient
                         Stopwatch timer = new Stopwatch();
                         timer.Start();
 
-                        byte[] fileDataBuffer = new byte[1024 * 1024];
+                        byte[] fileDataBuffer = new byte[Settings.FileBufferLengthInBytes];
                         byte[] lengthBuffer = new byte[sizeof(long)];
                         EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
                         do
@@ -210,6 +210,8 @@ namespace SocketClient
                 throw new ArgumentNullException(nameof(response), $"{nameof(response)} cannot be null");
             }
 
+            FreeSocketBuffer(requestHandler);
+
             return "DOWNLOAD";
         }
 
@@ -243,13 +245,14 @@ namespace SocketClient
                 Console.WriteLine(response.ToString());
             }
 
+
             return "UPLOAD";
         }
 
         public static long ReceiveChunk(Socket requestHandler, byte[] chunkBuffer, out int receivedBytesCount)
         {
             long offset;
-            var offsetBuffer = new byte[sizeof(long)];
+            var offsetBuffer = new byte[16];
             EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
             do
             {
@@ -270,6 +273,23 @@ namespace SocketClient
         public static void SendChunkAcknowledge(Socket requestHandler, long offset)
         {
             requestHandler.SendTo(BitConverter.GetBytes(offset), remoteEndPoint);
+        }
+
+        public static void FreeSocketBuffer(Socket requestHandler)
+        {
+            EndPoint anyIp = new IPEndPoint(IPAddress.Any, 0);
+            var dumbBufferForCleaning = new byte[1024];
+            while (requestHandler.Available > 0)
+            {
+                try
+                {
+                    requestHandler.ReceiveFrom(dumbBufferForCleaning, ref anyIp);
+                }
+                catch (SocketException)
+                {
+                }
+            }
+
         }
 
     }
