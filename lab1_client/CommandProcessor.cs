@@ -178,6 +178,7 @@ namespace SocketClient
                         {
                             int receivedBytesOnIteration = 0;
 
+                            int offset = 
                             if (ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration) == false)
                             {
                                 requestHandler.ReceiveTimeout = receiveTimeoutMemory;
@@ -244,16 +245,16 @@ namespace SocketClient
             return "UPLOAD";
         }
 
-        public static int ReceiveChunk(Socket requestHandler, byte[] chunkBuffer, out int receivedBytesCount)
+        public static long ReceiveChunk(Socket requestHandler, byte[] chunkBuffer, out int receivedBytesCount)
         {
-            int offset;
-            var offsetBuffer = new byte[sizeof(int)];
+            long offset;
+            var offsetBuffer = new byte[sizeof(long)];
             EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
             do
             {
-                requestHandler.ReceiveFrom(offsetBuffer, sizeof(int), SocketFlags.None, ref senderEndPoint);
+                requestHandler.ReceiveFrom(offsetBuffer, sizeof(long), SocketFlags.None, ref senderEndPoint);
 
-                offset = BitConverter.ToInt32(offsetBuffer);
+                offset = BitConverter.ToInt64(offsetBuffer);
             } while (!senderEndPoint.Equals(remoteEndPoint));
 
 
