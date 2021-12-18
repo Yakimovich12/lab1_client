@@ -147,7 +147,7 @@ namespace SocketClient
 
             byte[] request = Encoding.Unicode.GetBytes(requestString);
 
-            requestHandler.Send(request);
+            requestHandler.SendTo(request, remoteEndPoint);
 
             string response = ResponseData(requestHandler);
 
@@ -158,10 +158,10 @@ namespace SocketClient
 
                 if (response.Equals("Передача файла..."))
                 {
-                    var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
-                    requestHandler.ReceiveTimeout = 10000;
+                    //var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
+                    //requestHandler.ReceiveTimeout = 10000;
 
-                    requestHandler.Send(new byte[] { 1 });
+                    requestHandler.SendTo(new byte[] { 1 }, remoteEndPoint);
 
                     using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write))
                     {
@@ -170,7 +170,11 @@ namespace SocketClient
 
                         byte[] fileDataBuffer = new byte[1024 * 1024];
                         byte[] lengthBuffer = new byte[sizeof(long)];
-                        requestHandler.Receive(lengthBuffer, 0, sizeof(long), SocketFlags.None);
+                        EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                        do
+                        {
+                            requestHandler.ReceiveFrom(lengthBuffer, 0, sizeof(long), SocketFlags.None, ref senderEndPoint);
+                        } while (!senderEndPoint.Equals(remoteEndPoint));
                         long fileLengthInBytes = BitConverter.ToInt64(lengthBuffer);
 
                         int receivedBytesCount = 0;
@@ -178,15 +182,12 @@ namespace SocketClient
                         {
                             int receivedBytesOnIteration = 0;
 
-                            int offset = 
-                            if (ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration) == false)
-                            {
-                                requestHandler.ReceiveTimeout = receiveTimeoutMemory;
-                                return "DOWNLOAD";
-                            }
+                            long offset = ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration);
 
-
+                            stream.Seek(offset, SeekOrigin.Begin);
                             stream.Write(fileDataBuffer, 0, receivedBytesOnIteration);
+
+                            SendChunkAcknowledge(requestHandler, offset);
 
                             receivedBytesCount += receivedBytesOnIteration;
 
@@ -201,7 +202,7 @@ namespace SocketClient
                         Console.WriteLine($"Скорость передачи {(double)fileLengthInBytes / (1.0 / 1.024 * deltaTime * 1024)} Mb/s");
                     }
 
-                    requestHandler.ReceiveTimeout = receiveTimeoutMemory;
+                    //requestHandler.ReceiveTimeout = receiveTimeoutMemory;
                 }
             }
             else
@@ -265,6 +266,12 @@ namespace SocketClient
 
             return offset;
         }
+
+        public static void SendChunkAcknowledge(Socket requestHandler, long offset)
+        {
+            requestHandler.SendTo(BitConverter.GetBytes(offset), remoteEndPoint);
+        }
+
     }
 }
 
