@@ -10,7 +10,7 @@ namespace SocketClient
 {
     public static class CommandProcessor
     {
-        public static IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(Settings.ServerIP), Settings.PortServer);
+        public static EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse(Settings.ServerIP), Settings.PortServer);
 
         public delegate string CommandHandler(Socket socket);
         public static Dictionary<string, CommandHandler> Commands { get; private set; }
@@ -39,9 +39,9 @@ namespace SocketClient
 
         private static string Echo(Socket requestHandler)
         {
-            byte[] request = Encoding.Unicode.GetBytes("ECHO "+ Console.ReadLine());
+            byte[] request = Encoding.Unicode.GetBytes("ECHO " + Console.ReadLine());
 
-            requestHandler.SendTo(request,remoteEndPoint);
+            requestHandler.SendTo(request, remoteEndPoint);
 
 
             string response = ResponseData(requestHandler);
@@ -66,9 +66,13 @@ namespace SocketClient
 
             byte[] responseData = new byte[Settings.DataBufferLengthInBytes];
 
+            EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
             do
             {
-                bytes = requestHandler.ReceiveFrom(responseData,ref remoteEndPoint);
+                do
+                {
+                    bytes = requestHandler.ReceiveFrom(responseData, ref senderEndPoint);
+                } while (!senderEndPoint.Equals(remoteEndPoint));
 
                 builder.Append(Encoding.Unicode.GetString(responseData, 0, bytes));
             }
@@ -81,7 +85,7 @@ namespace SocketClient
         {
             byte[] request = Encoding.Unicode.GetBytes("TIME");
 
-            requestHandler.Send(request);
+            requestHandler.SendTo(request, remoteEndPoint);
 
             string response = ResponseData(requestHandler);
 
@@ -101,28 +105,30 @@ namespace SocketClient
         {
             byte[] request = Encoding.Unicode.GetBytes("CLOSE");
 
-            requestHandler.Send(request);
-
-            requestHandler.Shutdown(SocketShutdown.Both);
+            requestHandler.SendTo(request, remoteEndPoint);
 
             requestHandler.Close();
 
             return "CLOSE";
         }
-        
+
         private static string IsAlive(Socket requestHandler)
         {
             byte[] request = Encoding.Unicode.GetBytes("ISALIVE");
 
-            requestHandler.Send(request);
+            requestHandler.SendTo(request, remoteEndPoint);
 
             int bytes = 0;
 
-            byte[] responseData = new byte[ServerSettings.DataBufferLengthInBytes];
+            byte[] responseData = new byte[Settings.DataBufferLengthInBytes];
 
+            EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
             do
             {
-                bytes = requestHandler.Receive(responseData);
+                do
+                {
+                    bytes = requestHandler.ReceiveFrom(responseData, ref senderEndPoint);
+                } while (!senderEndPoint.Equals(remoteEndPoint));
             }
             while (requestHandler.Available > 0);
 
@@ -162,7 +168,7 @@ namespace SocketClient
                         Stopwatch timer = new Stopwatch();
                         timer.Start();
 
-                        byte[] fileDataBuffer = new byte[1024*1024];
+                        byte[] fileDataBuffer = new byte[1024 * 1024];
                         byte[] lengthBuffer = new byte[sizeof(long)];
                         requestHandler.Receive(lengthBuffer, 0, sizeof(long), SocketFlags.None);
                         long fileLengthInBytes = BitConverter.ToInt64(lengthBuffer);
@@ -217,7 +223,7 @@ namespace SocketClient
             byte[] request = Encoding.Unicode.GetBytes("UPLOAD " + path);
             requestHandler.Send(request);
 
-            byte[] response = new byte[ServerSettings.DataBufferLengthInBytes];
+            byte[] response = new byte[Settings.DataBufferLengthInBytes];
             int receiveBytes = requestHandler.Receive(response);
 
             if (receiveBytes == 1 && response[0] == 1)

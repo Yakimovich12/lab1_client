@@ -10,7 +10,7 @@ namespace SocketClient
         {
             var socket = ConfigureSocket();
 
-            Console.WriteLine("Клиент подключен к серверу");
+            Console.WriteLine("Клиент готов к отправке запросов");
 
             string operationName;
 
@@ -29,8 +29,7 @@ namespace SocketClient
             IPEndPoint ipEndpoint = new IPEndPoint(IPAddress.Parse(Settings.ClientIP), Settings.PortClient);
             socket.Bind(ipEndpoint);
 
-            //socket.ReceiveTimeout = ServerSettings.SocketReceiveTimeout;
-
+            //socket.ReceiveTimeout = Settings.SocketReceiveTimeout;
             return socket;
         }
     }
