@@ -16,7 +16,7 @@ namespace SocketClient
 
             Port = 8005;
 
-            DataBufferLengthInBytes = 256;
+            DataBufferLengthInBytes = 1024*5;
 
             SocketReceiveTimeout = 10000;
         }
