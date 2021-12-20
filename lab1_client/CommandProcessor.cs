@@ -158,8 +158,8 @@ namespace SocketClient
 
                 if (response.Equals("Передача файла..."))
                 {
-                    //var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
-                    //requestHandler.ReceiveTimeout = 10000;
+                    var receiveTimeoutMemory = requestHandler.ReceiveTimeout;
+                    requestHandler.ReceiveTimeout = 1000;
 
                     requestHandler.SendTo(new byte[] { 1 }, remoteEndPoint);
 
@@ -180,20 +180,27 @@ namespace SocketClient
                         int receivedBytesCount = 0;
                         while (receivedBytesCount < fileLengthInBytes)
                         {
-                            int receivedBytesOnIteration;
+                            try
+                            {
+                                int receivedBytesOnIteration;
 
-                            long offset = ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration);
+                                long offset = ReceiveChunk(requestHandler, fileDataBuffer, out receivedBytesOnIteration);
 
-                            stream.Seek(offset, SeekOrigin.Begin);
-                            stream.Write(fileDataBuffer, 0, receivedBytesOnIteration);
+                                stream.Seek(offset, SeekOrigin.Begin);
+                                stream.Write(fileDataBuffer, 0, receivedBytesOnIteration);
 
-                            SendChunkAcknowledge(requestHandler, offset);
+                                SendChunkAcknowledge(requestHandler, offset);
 
-                            receivedBytesCount += receivedBytesOnIteration;
+                                receivedBytesCount += receivedBytesOnIteration;
 
-                            var temp = receivedBytesCount / (fileLengthInBytes / 100);
+                                var temp = receivedBytesCount / (fileLengthInBytes / 100);
 
-                            Console.Write($"Скачано {temp}%\r");
+                                Console.Write($"Скачано {temp}%\r");
+                            }
+                            catch(SocketException)
+                            {
+                                FreeSocketBuffer(requestHandler);
+                            }
                         }
 
                         timer.Stop();
@@ -202,7 +209,7 @@ namespace SocketClient
                         Console.WriteLine($"Скорость передачи {(double)fileLengthInBytes / (1.0 / 1.024 * deltaTime * 1024)} Mb/s");
                     }
 
-                    //requestHandler.ReceiveTimeout = receiveTimeoutMemory;
+                    requestHandler.ReceiveTimeout = receiveTimeoutMemory;
                 }
             }
             else
@@ -257,7 +264,6 @@ namespace SocketClient
             do
             {
                 requestHandler.ReceiveFrom(offsetBuffer, sizeof(long), SocketFlags.None, ref senderEndPoint);
-
                 offset = BitConverter.ToInt64(offsetBuffer);
             } while (!senderEndPoint.Equals(remoteEndPoint));
 
