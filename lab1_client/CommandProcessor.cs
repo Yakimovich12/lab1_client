@@ -177,6 +177,15 @@ namespace SocketClient
                         } while (!senderEndPoint.Equals(remoteEndPoint));
                         long fileLengthInBytes = BitConverter.ToInt64(lengthBuffer);
 
+                        int numberOfChunk = (int)(fileLengthInBytes / 1024);
+
+                        if (fileLengthInBytes % 1024 != 0)
+                        {
+                            numberOfChunk++;
+                        }
+
+                        bool[] mask = new bool[numberOfChunk];
+
                         int receivedBytesCount = 0;
                         while (receivedBytesCount < fileLengthInBytes)
                         {
@@ -191,7 +200,11 @@ namespace SocketClient
 
                                 SendChunkAcknowledge(requestHandler, offset);
 
-                                receivedBytesCount += receivedBytesOnIteration;
+                                if (!mask[offset / 1024])
+                                {
+                                    receivedBytesCount += receivedBytesOnIteration;
+                                    mask[offset / 1024] = true;
+                                }
 
                                 var temp = receivedBytesCount / (fileLengthInBytes / 100);
 
