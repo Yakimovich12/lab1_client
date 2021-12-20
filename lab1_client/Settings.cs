@@ -13,12 +13,12 @@ namespace SocketClient
 
         static Settings()
         {
-            ServerIP = /*"25.66.204.93";*/"127.0.0.1";
-            ClientIP = "127.0.0.1";
+            ServerIP = /*"25.66.204.93";*/"192.168.0.2";
+            ClientIP = "192.168.0.13"/*"127.0.0.1"*/;
             PortServer = 8005;
             PortClient = 8006;
             DataBufferLengthInBytes = 1024;
-            FileBufferLengthInBytes = 1024* 5;
+            FileBufferLengthInBytes = 1024;
             SocketReceiveTimeout = 10000;
         }
     }
