@@ -131,8 +131,10 @@ namespace SocketClient
         private static string Download(Socket requestHandler)
         {
             Console.WriteLine("Введите путь к файлу:");
-
             string path = Console.ReadLine();
+
+            Console.WriteLine("Введите место сохранения файла:");
+            string directory = Console.ReadLine();
 
             var requestString = "DOWNLOAD " + path;
 
@@ -155,13 +157,13 @@ namespace SocketClient
                     //requestHandler.SendTimeout = 20000;
 
                     requestHandler.Send(new byte[] { 1 });
-
-                    using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write))
+                    string fileName = directory + path.Substring(path.LastIndexOf('\\') + 1);
+                    using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
                     {
                         Stopwatch timer = new Stopwatch();
                         timer.Start();
 
-                        byte[] fileDataBuffer = new byte[1024*1024];
+                        byte[] fileDataBuffer = new byte[256];
                         byte[] lengthBuffer = new byte[sizeof(long)];
                         requestHandler.Receive(lengthBuffer, 0, sizeof(long), SocketFlags.None);
                         long fileLengthInBytes = BitConverter.ToInt64(lengthBuffer);

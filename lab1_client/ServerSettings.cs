@@ -12,7 +12,7 @@ namespace SocketClient
         public static int SocketReceiveTimeout { get; private set; }
         static ServerSettings()
         {
-            ServerIP = /*"25.66.204.93";*/"192.168.0.2";
+            ServerIP = "127.0.0.1";/*"25.66.204.93";*///"192.168.0.2";
 
             Port = 8005;
 
